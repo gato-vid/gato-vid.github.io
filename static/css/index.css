@@ -749,5 +749,113 @@ a:focus {
   }
 }
 
+/* Layout para los 5 videos divididos */
+.split-video-container {
+  display: flex;
+  width: 100%;
+  gap: 0; /* Cambia a 2px o 4px si quieres una pequeña separación entre cortes */
+}
+
+.split-video-container video {
+  flex: 1;
+  width: 20% !important; /* Sobrescribe el width: 100% de .results-carousel video */
+  height: auto;
+  object-fit: cover;
+}
+
+/* Contenedor Grid */
+.results-carousel .split-video-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 4px;
+  width: 100%;
+}
+
+/* Envoltorio individual para posicionar la etiqueta sobre el video */
+.results-carousel .split-video-grid .video-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* El primer bloque (Ours) ocupa 2x2 */
+.results-carousel .split-video-grid .video-wrapper:nth-child(1) {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.results-carousel .split-video-grid video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  display: block;
+}
+
+/* Estilo de la etiqueta superpuesta */
+.results-carousel .video-label {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  pointer-events: none; /* Permite hacer clic en el video sin interferencia */
+  z-index: 2;
+}
 
 
+/* Color del fondo del botón de las flechas */
+.slider-navigation-previous,
+.slider-navigation-next {
+  background-color: #3273dc !important; /* Cambia al color de fondo deseado */
+  border-color: #ffffff !important;
+  opacity: 0.9;
+}
+
+/* Color del icono/flecha interna (SVG) */
+.slider-navigation-previous svg,
+.slider-navigation-next svg,
+.slider-navigation-previous svg path,
+.slider-navigation-next svg path {
+  fill: #2B0000 !important;   /* Cambia el color de la flecha */
+  stroke: #ffffff !important;
+}
+
+/* Efecto al pasar el ratón por encima (hover) */
+.slider-navigation-previous:hover,
+.slider-navigation-next:hover {
+  background-color: #2366d1 !important;
+  opacity: 1;
+}
+
+/* Limitar el tamaño de las imágenes en el carrusel */
+.results-carousel .item img {
+  max-width: 600px;     /* Ancho máximo deseado (o usa porcentaje, ej: 60%) */
+  max-height: 400px;    /* Altura máxima para evitar que ocupen alto excesivo */
+  width: auto !important;
+  height: auto !important;
+  margin: 0 auto !important;
+  display: block;
+}
+
+
+.algorithm-container {
+  max-width: 750px;
+  margin: 1.5rem auto;
+  text-align: left;
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  overflow-x: auto;
+}
+
+.ps-root {
+  font-size: 0.95rem;
+}

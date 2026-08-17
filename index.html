@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pseudocode@2.4.1/build/pseudocode.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/pseudocode@2.4.1/build/pseudocode.min.js"></script>
+
+
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
@@ -177,6 +184,13 @@
     ]
   }
   </script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      pseudocode.renderElement(document.getElementById("alg-bias-injection"), {
+        lineNumber: true // Cambia a false si no quieres números de línea
+      });
+    });
+  </script>
 </head>
 <body>
 
@@ -221,10 +235,10 @@
           </div>
           <i class="fas fa-external-link-alt"></i>
         </a>
-        <a href="https://arxiv.org/abs/2502.17196" class="work-item" target="_blank">
+        <a href="https://obvious-research.github.io/jolt/static/pdfs/jolt.pdf" class="work-item" target="_blank">
           <div class="work-info">
-            <h5>Disentangling Visual Transformers: Patch-level Interpretability for Image Classification</h5>
-            <p>An interpretable by-design transformer for image classification.</p>
+            <h5>JoLT: Joint Latent Trajectories for Context-Guided High-Resolution Tiled Generation</h5>
+            <p>High-resolution image generation pipeline a detail-controlling feature</p>
             <span class="work-venue">CVPR 2025</span>
           </div>
           <i class="fas fa-external-link-alt"></i>
@@ -357,20 +371,50 @@
   <div class="hero-body">
     <div class="container">
       <div id="results-carousel" class="carousel results-carousel">
-       <div class="item">
-        <!-- Your image here -->
-        <img src="static/images/score.png" alt="Score" style="margin-left: auto; margin-right: auto; display: block;"/>
-        <h2 class="subtitle has-text-centered">
-          Fig 1. We proposed a new score that minimizes the ell_2 score on the fly.
-        </h2>
-      </div>
-      <div class="item">
-        <!-- Your image here -->
-        <img src="static/images/algorithm.png" alt="algo" style="margin-left: auto; margin-right: auto; display: block;"/>
-        <h2 class="subtitle has-text-centered">
-          Algorithm 1. Main injection mechanism.
-        </h2>
-       </div>
+        <div class="item">
+          <!-- Your image here -->
+          <img src="static/images/for-page2.png" alt="Score" style="margin-left: auto; margin-right: auto; display: block;"/>
+          <h2 class="subtitle has-text-centered">
+            Fig 1. We proposed a new surrogate score that minimizes the ℓ2.
+          </h2>
+        </div>
+        <div class="item">
+          <!-- Your image here -->
+          <img src="static/images/score.png" alt="Score" style="margin-left: auto; margin-right: auto; display: block;"/>
+          <h2 class="subtitle has-text-centered">
+            Fig 2. Adding the analytical solution with several strengths minimizes the ℓ2 loss.
+          </h2>
+        </div>
+        <div class="algorithm-container">
+          <pre id="alg-bias-injection" style="display:none;">
+        \begin{algorithm}
+        \caption{\textbf{Bias Injection:} First, the positive and negative directions are computed using the selected text tokens. Then, the biases are injected back into the queries, which are then reprojected onto the RMSNorm ellipsoid. Finally, the newly modified tokens through the cross-attention.}
+        \begin{algorithmic}
+        \Require Generator $f_\theta$, $x$ video features, $t$ current step, prompt features $\tau\in\mathbb{R}^{|\tau|\times n}$, target map $M$, selected words $T$, $S_B$ set of blocks where we inject the bias.
+        \State $x \leftarrow f\texttt{.tokenize}(x) \in\mathbb{R}^{\mathrm{THW}\times n}$
+        \For{$b$ in $f_\theta$\texttt{.blocks}}
+            \State $x\leftarrow x + b.\texttt{Self-Attention}(x)$
+            \State $q, k, v \leftarrow b\texttt{.norm\_q}(b\texttt{.to\_q}(x)), b\texttt{.norm\_k}(b\texttt{.to\_k}(\tau)), b\texttt{.to\_v}(\tau)$
+            \If{$b \in S_B$}
+                \State $b^+ = \texttt{Normalize}\big(\texttt{mean}(k[T]) - \texttt{mean}(k[T^c])\big)$
+                \State $q' \leftarrow q[M]$ \Comment{Get queries inside the mask}
+                \State $q' \leftarrow q' + \lambda^+ \|q'\| b^+$ \Comment{Add positive bias}
+                \State $q' \leftarrow \frac{\sqrt{n}}{\|q'\oslash b\texttt{.norm\_q}.\gamma\|} q'$ \Comment{Normalization to hyper-ellipsoid}
+                \State $q[M] \leftarrow q'$
+                \State $b^- = \texttt{Normalize}(\texttt{mean}(k[T^c]))$
+                \State $q' \leftarrow q[M^c]$ \Comment{Get queries outside the mask}
+                \State $q' \leftarrow q' - \lambda^+ \|q'\| b^-$ \Comment{Add negative bias}
+                \State $q' \leftarrow \frac{\sqrt{n}}{\|q'\oslash b\texttt{.norm\_q}.\gamma\|} q'$ \Comment{Normalization to hyper-ellipsoid}
+                \State $q[M^c] \leftarrow q'$
+            \EndIf
+            \State $x \leftarrow x + b.\texttt{cross-attention}(q,k,v)$
+            \State $x\leftarrow x + b.\texttt{FFN}(x)$
+            \State \Return $f.\texttt{detokenize}(x)$
+        \EndFor
+        \end{algorithmic}
+        \end{algorithm}
+          </pre>
+        </div>
       </div>
     </div>
   </div>
@@ -406,72 +450,401 @@
   <div class="hero-body">
     <div class="container">
       <h2 class="title is-3">Qualitative Comparison</h2>
-      <h2 class="title is-6 has-text-centered">From left to right: GATO-Vid (Ours), Peekaboo, VideoTetris, SwitchCraft, Wan2.2 T2V Vanilla</h2>
       <div id="results-carousel" class="carousel results-carousel">
         <div class="item item-video1">
-          <video poster="" id="video1" controls muted loop height="100%">
-            <!-- Your video file here -->
-            <source src="static/videos/h-video-0.mp4"
-            type="video/mp4">
-          </video>
-          <video poster="" id="video1" controls muted loop height="100%">
-            <!-- Your video file here -->
-            <source src="static/videos/unnat-video-0.mp4"
-            type="video/mp4">
-          </video>
+          <div class="split-video-grid">
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-0/segment_0.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">GATO-Vid (Ours)</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-0/segment_1.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Peekaboo</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-0/segment_2.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">VideoTetris</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-0/segment_3.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">SwitchCraft</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-0/segment_4.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Wan2.2 T2V</span>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="split-video-grid">
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-0/segment_0.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">GATO-Vid (Ours)</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-0/segment_1.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Peekaboo</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-0/segment_2.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">VideoTetris</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-0/segment_3.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">SwitchCraft</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-0/segment_4.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Wan2.2 T2V</span>
+            </div>
+          </div>
         </div>
+
+
 
         <div class="item item-video2">
-          <video poster="" id="video2" controls muted loop height="100%">
-            <!-- Your video file here -->
-            <source src="static/videos/h-video-1.mp4"
-            type="video/mp4">
-          </video>
-          <video poster="" id="video2" controls muted loop height="100%">
-            <!-- Your video file here -->
-            <source src="static/videos/unnat-video-1.mp4"
-            type="video/mp4">
-          </video>
+          <div class="split-video-grid">
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-1/segment_0.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">GATO-Vid (Ours)</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-1/segment_1.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Peekaboo</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-1/segment_2.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">VideoTetris</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-1/segment_3.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">SwitchCraft</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-1/segment_4.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Wan2.2 T2V</span>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="split-video-grid">
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-1/segment_0.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">GATO-Vid (Ours)</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-1/segment_1.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Peekaboo</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-1/segment_2.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">VideoTetris</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-1/segment_3.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">SwitchCraft</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-1/segment_4.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Wan2.2 T2V</span>
+            </div>
+          </div>
         </div>
+
 
         <div class="item item-video3">
-          <video poster="" id="video3" controls muted loop height="100%">
-            <!-- Your video file here -->
-            <source src="static/videos/h-video-2.mp4"
-            type="video/mp4">
-          </video>
-          <video poster="" id="video3" controls muted loop height="100%">
-            <!-- Your video file here -->
-            <source src="static/videos/unnat-video-2.mp4"
-            type="video/mp4">
-          </video>
+          <div class="split-video-grid">
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-2/segment_0.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">GATO-Vid (Ours)</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-2/segment_1.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Peekaboo</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-2/segment_2.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">VideoTetris</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-2/segment_3.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">SwitchCraft</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-2/segment_4.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Wan2.2 T2V</span>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="split-video-grid">
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-2/segment_0.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">GATO-Vid (Ours)</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-2/segment_1.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Peekaboo</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-2/segment_2.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">VideoTetris</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-2/segment_3.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">SwitchCraft</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-2/segment_4.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Wan2.2 T2V</span>
+            </div>
+          </div>
         </div>
 
+
         <div class="item item-video4">
-          <video poster="" id="video4" controls muted loop height="100%">
-            <!-- Your video file here -->
-            <source src="static/videos/h-video-3.mp4"
-            type="video/mp4">
-          </video>
-          <video poster="" id="video4" controls muted loop height="100%">
-            <!-- Your video file here -->
-            <source src="static/videos/unnat-video-3.mp4"
-            type="video/mp4">
-          </video>
+          <div class="split-video-grid">
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-3/segment_0.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">GATO-Vid (Ours)</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-3/segment_1.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Peekaboo</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-3/segment_2.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">VideoTetris</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-3/segment_3.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">SwitchCraft</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-3/segment_4.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Wan2.2 T2V</span>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="split-video-grid">
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-3/segment_0.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">GATO-Vid (Ours)</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-3/segment_1.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Peekaboo</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-3/segment_2.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">VideoTetris</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-3/segment_3.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">SwitchCraft</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-3/segment_4.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Wan2.2 T2V</span>
+            </div>
+          </div>
         </div>
 
         <div class="item item-video5">
-          <video poster="" id="video5" controls muted loop height="100%">
-            <!-- Your video file here -->
-            <source src="static/videos/h-video-4.mp4"
-            type="video/mp4">
-          </video>
-          <video poster="" id="video5" controls muted loop height="100%">
-            <!-- Your video file here -->
-            <source src="static/videos/unnat-video-4.mp4"
-            type="video/mp4">
-          </video>
+          <div class="split-video-grid">
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-4/segment_0.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">GATO-Vid (Ours)</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-4/segment_1.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Peekaboo</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-4/segment_2.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">VideoTetris</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-4/segment_3.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">SwitchCraft</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/h-video-4/segment_4.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Wan2.2 T2V</span>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="split-video-grid">
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-4/segment_0.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">GATO-Vid (Ours)</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-4/segment_1.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Peekaboo</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-4/segment_2.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">VideoTetris</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-4/segment_3.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">SwitchCraft</span>
+            </div>
+
+            <div class="video-wrapper">
+              <video muted loop>
+                <source src="static/videos/unnat-video-4/segment_4.mp4" type="video/mp4">
+              </video>
+              <span class="video-label">Wan2.2 T2V</span>
+            </div>
+          </div>
         </div>
+
 
       </div>
     </div>
